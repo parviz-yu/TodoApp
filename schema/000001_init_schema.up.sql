@@ -8,8 +8,8 @@ CREATE TABLE users (
 CREATE TABLE tasks (
   id BIGSERIAL not NULL PRIMARY KEY,
   user_id BIGSERIAL NOT NULL,
+  title VARCHAR NOT NULL,
   description VARCHAR not NULL,
-  status BOOLEAN NoT NULL,
-  creation_date TIMESTAMP NOT NULL,
-  due_date TIMESTAMP NOT NULL
+  done BOOLEAN NOT NULL,
+  creation_date TIMESTAMP NOT NULL
 );
