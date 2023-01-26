@@ -32,5 +32,4 @@ func TestUserRepository_FindByEmail(t *testing.T) {
 	_, err = s.User().FindByEmail(u.Email)
 	assert.NoError(t, err)
 	assert.NotNil(t, u)
-	t.Logf("%#v", u)
 }

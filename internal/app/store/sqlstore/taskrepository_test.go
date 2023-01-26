@@ -55,3 +55,57 @@ func TestTaskRepository_GetBool(t *testing.T) {
 	assert.NotNil(t, result)
 	assert.Len(t, result, 1)
 }
+
+func TestTaskRepository_GetById(t *testing.T) {
+	db, teardown := sqlstore.TestDB(t, databaseURL)
+	defer teardown("tasks")
+
+	s := sqlstore.New(db)
+	task := model.TestTask(t)
+	s.Task().Create(task)
+
+	// Getting existing task
+	taskById, err := s.Task().GetById(task.UserID, task.ID)
+	assert.NoError(t, err)
+	assert.NotNil(t, taskById)
+
+	// Getting nonexisting task
+	taskById2, err := s.Task().GetById(task.UserID, 5)
+	assert.Error(t, err)
+	assert.Nil(t, taskById2)
+}
+
+func TestTaskRepository_Done(t *testing.T) {
+	db, teardown := sqlstore.TestDB(t, databaseURL)
+	defer teardown("tasks")
+
+	s := sqlstore.New(db)
+	task := model.TestTask(t)
+
+	// Existing task
+	s.Task().Create(task)
+	err := s.Task().Done(task.UserID, task.ID)
+	assert.NoError(t, err)
+
+	// Nonexisting task
+	s.Task().Create(task)
+	err = s.Task().Done(task.UserID, 5)
+	assert.EqualError(t, err, store.ErrInvalidTaskId.Error())
+}
+
+func TestTaskRepository_Delete(t *testing.T) {
+	db, teardown := sqlstore.TestDB(t, databaseURL)
+	defer teardown("tasks")
+
+	s := sqlstore.New(db)
+	task := model.TestTask(t)
+
+	// Existiing task
+	s.Task().Create(task)
+	err := s.Task().Delete(task.UserID, task.ID)
+	assert.NoError(t, err)
+
+	// Nonexisting task
+	err = s.Task().Delete(5, 6)
+	assert.EqualError(t, err, store.ErrInvalidTaskId.Error())
+}
