@@ -23,6 +23,63 @@ func (r *TaskRepository) Create(task *model.Task) error {
 	).Scan(&task.ID)
 }
 
+// GetById return task by id
+func (r *TaskRepository) GetById(userId int, taskId int) (*model.Task, error) {
+	u := &model.Task{}
+
+	if err := r.store.db.QueryRow(
+		"SELECT * FROM tasks WHERE user_id=$1 and id=$2", userId, taskId,
+	).Scan(
+		&u.ID, &u.UserID, &u.Title, &u.Description, &u.Done, &u.CreationDate,
+	); err != nil {
+		return nil, err
+	}
+
+	return u, nil
+}
+
+// Done marks tasks as complited
+func (r *TaskRepository) Done(userId int, taskId int) error {
+	res, err := r.store.db.Exec(
+		"UPDATE tasks SET done=TRUE WHERE user_id=$1 and id=$2", userId, taskId,
+	)
+	if err != nil {
+		return err
+	}
+
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if n == 0 {
+		return store.ErrInvalidTaskId
+	}
+
+	return nil
+}
+
+// Delete deletes tasks
+func (r *TaskRepository) Delete(userId int, taskId int) error {
+	res, err := r.store.db.Exec(
+		"DELETE FROM tasks WHERE user_id=$1 and id=$2", userId, taskId,
+	)
+	if err != nil {
+		return err
+	}
+
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if n == 0 {
+		return store.ErrInvalidTaskId
+	}
+
+	return nil
+}
+
 // GetAll gets all User's tasks
 func (r *TaskRepository) GetAll(userId int) ([]*model.Task, error) {
 	return r.getUnderHood(userId)
