@@ -1,6 +1,11 @@
 package sqlstore
 
-import "github.com/pyuldashev912/todoapp/internal/app/model"
+import (
+	"database/sql"
+
+	"github.com/pyuldashev912/todoapp/internal/app/model"
+	"github.com/pyuldashev912/todoapp/internal/app/store"
+)
 
 type UserRepository struct {
 	store *Store
@@ -30,6 +35,22 @@ func (r *UserRepository) FindByEmail(email string) (*model.User, error) {
 	if err := r.store.db.QueryRow(
 		`SELECT id, name, email, encrypted_password FROM users WHERE email=$1`, email,
 	).Scan(&user.ID, &user.Name, &user.Email, &user.EncryptedPassword); err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+// FindById returns a user with appropriate id
+func (r *UserRepository) FindById(userId int) (*model.User, error) {
+	user := &model.User{}
+	if err := r.store.db.QueryRow(
+		`SELECT id, name, email FROM users WHERE id=$1`, userId,
+	).Scan(&user.ID, &user.Name, &user.Email); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, store.ErrNoRecordsInTable
+		}
+
 		return nil, err
 	}
 
