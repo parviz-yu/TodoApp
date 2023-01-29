@@ -1,7 +1,9 @@
 package apiserver
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -13,8 +15,16 @@ import (
 )
 
 const (
-	sessionName = "todoapp"
+	sessionName        = "todoapp"
+	ctxKeyUser  ctxKey = iota
 )
+
+var (
+	ErrIncorrectEmailOrPassword = errors.New("incorrect email or password")
+	errNotAuthenticated         = errors.New("not authenticated")
+)
+
+type ctxKey int8
 
 type server struct {
 	router       *mux.Router
@@ -40,10 +50,33 @@ func newServer(store store.Store, sessionStore sessions.Store) *server {
 func (s *server) configureRouter() {
 	s.router.HandleFunc("/user/create", s.handleUserCreate()).Methods("POST")
 	s.router.HandleFunc("/user/login", s.handleUserLogin()).Methods("POST")
+
+	auth := s.router.PathPrefix("").Subrouter()
+	auth.Use(s.authUserMW)
+	auth.HandleFunc("/user/logout", s.handleUserLogout()).Methods("POST")
+	auth.HandleFunc("/user/whoami", s.handleWhoAmI()).Methods("GET")
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
+}
+
+func (s *server) authUserMW(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session, err := s.sessionStore.Get(r, sessionName)
+		if err != nil {
+			s.error(w, r, http.StatusInternalServerError, err)
+			return
+		}
+
+		userId, ok := session.Values["user_id"]
+		if !ok {
+			s.error(w, r, http.StatusUnauthorized, errNotAuthenticated)
+			return
+		}
+
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKeyUser, userId)))
+	})
 }
 
 func (s *server) handleUserCreate() http.HandlerFunc {
@@ -91,7 +124,7 @@ func (s *server) handleUserLogin() http.HandlerFunc {
 
 		user, err := s.store.User().FindByEmail(req.Email)
 		if err != nil || !user.ComparePassword(req.Password) {
-			s.error(w, r, http.StatusUnauthorized, store.ErrIncorrectEmailOrPassword)
+			s.error(w, r, http.StatusUnauthorized, ErrIncorrectEmailOrPassword)
 			return
 		}
 
@@ -101,13 +134,50 @@ func (s *server) handleUserLogin() http.HandlerFunc {
 			return
 		}
 
+		session.Options = &sessions.Options{
+			Path:     "/",
+			MaxAge:   86400 * 3, // 86400 seconds = 24 hours
+			HttpOnly: true,
+		}
+
 		session.Values["user_id"] = user.ID
 		if err = s.sessionStore.Save(r, w, session); err != nil {
 			s.error(w, r, http.StatusInternalServerError, err)
 			return
 		}
 
-		s.respond(w, r, http.StatusOK, nil)
+		s.respond(w, r, http.StatusOK, map[string]string{"info": "you've successfully logged in"})
+	}
+}
+
+func (s *server) handleUserLogout() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, err := s.sessionStore.Get(r, sessionName)
+		if err != nil {
+			s.error(w, r, http.StatusInternalServerError, err)
+			return
+		}
+
+		session.Options.MaxAge = -1
+		delete(session.Values, "user_id")
+		if err := session.Save(r, w); err != nil {
+			s.error(w, r, http.StatusInternalServerError, err)
+			return
+		}
+		s.respond(w, r, http.StatusOK, map[string]string{"info": "you've successfully logged out"})
+	}
+}
+
+func (s *server) handleWhoAmI() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := r.Context().Value(ctxKeyUser).(int)
+		user, err := s.store.User().FindById(userId)
+		if err != nil {
+			s.error(w, r, http.StatusUnauthorized, errNotAuthenticated)
+			return
+		}
+
+		s.respond(w, r, http.StatusOK, user)
 	}
 }
 
