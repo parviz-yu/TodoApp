@@ -32,3 +32,12 @@ func (r *UserRepository) FindByEmail(email string) (*model.User, error) {
 	}
 	return nil, store.ErrNoRecordsInTable
 }
+
+func (r *UserRepository) FindById(id int) (*model.User, error) {
+	u, ok := r.users[id]
+	if !ok {
+		return nil, store.ErrNoRecordsInTable
+	}
+
+	return u, nil
+}
