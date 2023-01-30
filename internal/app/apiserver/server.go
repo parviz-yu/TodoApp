@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -21,7 +23,7 @@ const (
 
 var (
 	ErrIncorrectEmailOrPassword = errors.New("incorrect email or password")
-	errNotAuthenticated         = errors.New("not authenticated")
+	ErrNotAuthenticated         = errors.New("not authenticated")
 )
 
 type ctxKey int8
@@ -55,6 +57,10 @@ func (s *server) configureRouter() {
 	auth.Use(s.authUserMW)
 	auth.HandleFunc("/user/logout", s.handleUserLogout()).Methods("POST")
 	auth.HandleFunc("/user/whoami", s.handleWhoAmI()).Methods("GET")
+
+	auth.HandleFunc("/task/add", s.handleTaskAdd()).Methods("POST")
+	auth.HandleFunc("/task/delete", s.handleTaskDelete()).Methods("DELETE").Queries("id", "{id}")
+	auth.HandleFunc("/task/done", s.handleTaskDone()).Methods("PATCH").Queries("id", "{id}")
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -71,7 +77,7 @@ func (s *server) authUserMW(next http.Handler) http.Handler {
 
 		userId, ok := session.Values["user_id"]
 		if !ok {
-			s.error(w, r, http.StatusUnauthorized, errNotAuthenticated)
+			s.error(w, r, http.StatusUnauthorized, ErrNotAuthenticated)
 			return
 		}
 
@@ -173,11 +179,86 @@ func (s *server) handleWhoAmI() http.HandlerFunc {
 		userId := r.Context().Value(ctxKeyUser).(int)
 		user, err := s.store.User().FindById(userId)
 		if err != nil {
-			s.error(w, r, http.StatusUnauthorized, errNotAuthenticated)
+			s.error(w, r, http.StatusUnauthorized, ErrNotAuthenticated)
 			return
 		}
 
 		s.respond(w, r, http.StatusOK, user)
+	}
+}
+
+func (s *server) handleTaskAdd() http.HandlerFunc {
+	type Request struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		req := &Request{}
+		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+			s.error(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		task := &model.Task{
+			UserID:       r.Context().Value(ctxKeyUser).(int),
+			Title:        req.Title,
+			Description:  req.Description,
+			Done:         false,
+			CreationDate: time.Now().Format("02/01/06"),
+		}
+
+		if err := s.store.Task().Create(task); err != nil {
+			s.error(w, r, http.StatusUnprocessableEntity, err)
+			return
+		}
+
+		s.respond(w, r, http.StatusCreated, task)
+	}
+}
+
+func (s *server) handleTaskDelete() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := r.Context().Value(ctxKeyUser).(int)
+		taskId, err := strconv.Atoi(r.URL.Query().Get("id"))
+		if err != nil {
+			s.error(w, r, http.StatusBadRequest, store.ErrInvalidTaskId)
+			return
+		}
+
+		if err := s.store.Task().Delete(userId, taskId); err != nil {
+			s.error(w, r, http.StatusNotFound, err)
+			return
+		}
+
+		s.respond(w, r, http.StatusOK, map[string]string{
+			"info": "you've successfully deleted a task",
+		})
+	}
+}
+
+func (s *server) handleTaskDone() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := r.Context().Value(ctxKeyUser).(int)
+		taskId, err := strconv.Atoi(r.URL.Query().Get("id"))
+		if err != nil {
+			s.error(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		if err := s.store.Task().Done(userId, taskId); err != nil {
+			if err == store.ErrInvalidTaskId {
+				s.error(w, r, http.StatusNotFound, err)
+				return
+			}
+
+			s.error(w, r, http.StatusInternalServerError, err)
+			return
+		}
+
+		s.respond(w, r, http.StatusOK, map[string]string{
+			"info": "congrats! you've done a task",
+		})
 	}
 }
 
