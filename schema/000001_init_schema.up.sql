@@ -11,5 +11,5 @@ CREATE TABLE tasks (
   title VARCHAR NOT NULL,
   description VARCHAR not NULL,
   done BOOLEAN NOT NULL,
-  creation_date TIMESTAMP NOT NULL
+  creation_date VARCHAR NOT NULL
 );

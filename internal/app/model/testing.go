@@ -19,6 +19,6 @@ func TestTask(t *testing.T) *Task {
 		Title:        "Create TodoApp",
 		Description:  "Add new features",
 		Done:         false,
-		CreationDate: time.Now(),
+		CreationDate: time.Now().String(),
 	}
 }

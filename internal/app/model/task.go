@@ -1,18 +1,16 @@
 package model
 
 import (
-	"time"
-
 	validation "github.com/go-ozzo/ozzo-validation"
 )
 
 type Task struct {
-	ID           int
-	UserID       int
-	Title        string
-	Description  string
-	Done         bool
-	CreationDate time.Time
+	ID           int    `json:"id"`
+	UserID       int    `json:"-"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	Done         bool   `json:"done"`
+	CreationDate string `json:"creation_date"`
 }
 
 func (t *Task) Validate() error {

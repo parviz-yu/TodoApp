@@ -48,7 +48,7 @@ func TestTaskRepository_GetBool(t *testing.T) {
 	s.Task().Create(task)
 	s.Task().Create(task)
 	s.Task().Create(&model.Task{
-		UserID: 2, Title: "Check", Description: "Some text", CreationDate: time.Now(),
+		UserID: 2, Title: "Check", Description: "Some text", CreationDate: time.Now().Format("02/01/06"),
 	})
 	result, err := s.Task().GetBool(2, false)
 	assert.NoError(t, err)
