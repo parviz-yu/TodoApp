@@ -363,3 +363,127 @@ func TestServer_handleTaskDone(t *testing.T) {
 		})
 	}
 }
+
+func TestServer_handleTaskGet(t *testing.T) {
+	store := teststore.New()
+	task := model.TestTask(t)
+	store.Task().Create(task)
+	srv := newServer(store, nil)
+
+	testCases := []struct {
+		name         string
+		userId       interface{}
+		queryString  string
+		expectedCode int
+	}{
+		{
+			name:         "valid id",
+			userId:       task.UserID,
+			queryString:  "/task/get?id=1",
+			expectedCode: http.StatusOK,
+		},
+		{
+			name:         "invalid id",
+			userId:       task.UserID,
+			queryString:  "/task/get?id=id",
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "not existing id",
+			userId:       task.UserID,
+			queryString:  "/task/get?id=150",
+			expectedCode: http.StatusNotFound,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			req, _ := http.NewRequest(http.MethodGet, tc.queryString, nil)
+			req = req.WithContext(context.WithValue(req.Context(), ctxKeyUser, tc.userId))
+			srv.ServeHTTP(rec, req)
+			assert.Equal(t, tc.expectedCode, rec.Result().StatusCode)
+		})
+	}
+}
+
+func TestServer_handleTaskGetDone(t *testing.T) {
+	store := teststore.New()
+	task := model.TestTask(t)
+	store.Task().Create(task)
+	srv := newServer(store, nil)
+
+	testCases := []struct {
+		name         string
+		userId       interface{}
+		queryString  string
+		expectedCode int
+	}{
+		{
+			name:         "valid argument",
+			userId:       task.UserID,
+			queryString:  "/task/getdone?done=false",
+			expectedCode: http.StatusOK,
+		},
+		{
+			name:         "not found task",
+			userId:       task.UserID,
+			queryString:  "/task/getdone?done=true",
+			expectedCode: http.StatusNotFound,
+		},
+		{
+			name:         "invalid argument",
+			userId:       task.UserID,
+			queryString:  "/task/getdone?done=2",
+			expectedCode: http.StatusBadRequest,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			req, _ := http.NewRequest(http.MethodGet, tc.queryString, nil)
+			req = req.WithContext(context.WithValue(req.Context(), ctxKeyUser, tc.userId))
+			srv.ServeHTTP(rec, req)
+			assert.Equal(t, tc.expectedCode, rec.Result().StatusCode)
+		})
+	}
+}
+
+func TestServer_handleTaskGetAll(t *testing.T) {
+	store := teststore.New()
+	task := model.TestTask(t)
+	srv := newServer(store, nil)
+
+	testCases := []struct {
+		name         string
+		userId       interface{}
+		create       bool
+		expectedCode int
+	}{
+		{
+			name:         "no tasks in storage",
+			userId:       task.UserID,
+			expectedCode: http.StatusNotFound,
+		},
+		{
+			name:         "valid",
+			userId:       task.UserID,
+			create:       true,
+			expectedCode: http.StatusOK,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			if tc.create {
+				store.Task().Create(task)
+			}
+			req, _ := http.NewRequest(http.MethodGet, "/task/getall", nil)
+			req = req.WithContext(context.WithValue(req.Context(), ctxKeyUser, tc.userId))
+			srv.ServeHTTP(rec, req)
+			assert.Equal(t, tc.expectedCode, rec.Result().StatusCode)
+		})
+	}
+}

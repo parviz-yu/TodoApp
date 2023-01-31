@@ -32,6 +32,9 @@ func (r *TaskRepository) GetById(userId int, taskId int) (*model.Task, error) {
 	).Scan(
 		&u.ID, &u.UserID, &u.Title, &u.Description, &u.Done, &u.CreationDate,
 	); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, store.ErrInvalidTaskId
+		}
 		return nil, err
 	}
 
