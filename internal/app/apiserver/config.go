@@ -1,13 +1,20 @@
 package apiserver
 
+import "os"
+
 type Config struct {
-	BindAddr    string `toml:"bind_addr"`
-	LogLevel    string `toml:"log_level"`
-	DatabaseURL string `toml:"database_url"`
-	SessioKey   string `toml:"session_key"`
+	BindAddr    string
+	LogLevel    string
+	DatabaseURL string
+	SessioKey   string
 }
 
 // NewConfig return new Config instance
 func NewConfig() *Config {
-	return &Config{}
+	return &Config{
+		BindAddr:    os.Getenv("BIND_ADDR"),
+		LogLevel:    os.Getenv("LOG_LEVEL"),
+		DatabaseURL: os.Getenv("DATABASE_URL"),
+		SessioKey:   os.Getenv("SESSION_KEY"),
+	}
 }
