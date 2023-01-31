@@ -61,6 +61,9 @@ func (s *server) configureRouter() {
 	auth.HandleFunc("/task/add", s.handleTaskAdd()).Methods("POST")
 	auth.HandleFunc("/task/delete", s.handleTaskDelete()).Methods("DELETE").Queries("id", "{id}")
 	auth.HandleFunc("/task/done", s.handleTaskDone()).Methods("PATCH").Queries("id", "{id}")
+	auth.HandleFunc("/task/get", s.handleTaskGet()).Methods("GET").Queries("id", "{id}")
+	auth.HandleFunc("/task/getdone", s.handleTaskGetDone()).Methods("GET").Queries("done", "{done}")
+	auth.HandleFunc("/task/getall", s.handleTaskGetAll()).Methods("GET")
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -259,6 +262,68 @@ func (s *server) handleTaskDone() http.HandlerFunc {
 		s.respond(w, r, http.StatusOK, map[string]string{
 			"info": "congrats! you've done a task",
 		})
+	}
+}
+
+func (s *server) handleTaskGet() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := r.Context().Value(ctxKeyUser).(int)
+		taskId, err := strconv.Atoi(r.URL.Query().Get("id"))
+		if err != nil {
+			s.error(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		task, err := s.store.Task().GetById(userId, taskId)
+		if err != nil {
+
+			s.error(w, r, http.StatusNotFound, err)
+			return
+		}
+
+		s.respond(w, r, http.StatusOK, task)
+	}
+}
+
+func (s *server) handleTaskGetDone() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := r.Context().Value(ctxKeyUser).(int)
+		done, err := strconv.ParseBool(r.URL.Query().Get("done"))
+		if err != nil {
+			s.error(w, r, http.StatusBadRequest, err)
+			return
+		}
+
+		tasks, err := s.store.Task().GetBool(userId, done)
+		if err != nil {
+			if err == store.ErrNoRecordsInTable {
+				s.error(w, r, http.StatusNotFound, err)
+				return
+			}
+
+			s.error(w, r, http.StatusInternalServerError, err)
+			return
+		}
+
+		s.respond(w, r, http.StatusOK, tasks)
+	}
+}
+
+func (s *server) handleTaskGetAll() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := r.Context().Value(ctxKeyUser).(int)
+		tasks, err := s.store.Task().GetAll(userId)
+		if err != nil {
+			if err == store.ErrNoRecordsInTable {
+				s.error(w, r, http.StatusNotFound, err)
+				return
+			}
+
+			s.error(w, r, http.StatusInternalServerError, err)
+			return
+		}
+
+		s.respond(w, r, http.StatusOK, tasks)
 	}
 }
 
