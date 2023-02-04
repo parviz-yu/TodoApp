@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/pyuldashev912/todoapp/internal/app/model"
 	"github.com/pyuldashev912/todoapp/internal/app/store/teststore"
@@ -17,7 +16,7 @@ import (
 )
 
 func TestServer_handleUserCreate(t *testing.T) {
-	s := newServer(teststore.New(), sessions.NewCookieStore([]byte("secret")))
+	s := newServer(teststore.New(), nil)
 
 	testCases := []struct {
 		name         string
@@ -53,7 +52,7 @@ func TestServer_handleUserCreate(t *testing.T) {
 			rec := httptest.NewRecorder()
 			buf := &bytes.Buffer{}
 			json.NewEncoder(buf).Encode(tc.payload)
-			req, _ := http.NewRequest(http.MethodPost, "/user/create", buf)
+			req, _ := http.NewRequest(http.MethodPost, "/sign-up", buf)
 			s.ServeHTTP(rec, req)
 			result := rec.Result()
 			assert.Equal(t, tc.expectedCode, result.StatusCode)
@@ -107,7 +106,7 @@ func TestServer_handleUserLogin(t *testing.T) {
 			rec := httptest.NewRecorder()
 			buf := &bytes.Buffer{}
 			json.NewEncoder(buf).Encode(tc.payload)
-			req, _ := http.NewRequest(http.MethodPost, "/user/login", buf)
+			req, _ := http.NewRequest(http.MethodPost, "/sign-in", buf)
 			srv.ServeHTTP(rec, req)
 			assert.Equal(t, tc.expectedCode, rec.Result().StatusCode)
 		})
@@ -138,9 +137,8 @@ func TestServer_authUserMW(t *testing.T) {
 		},
 	}
 
-	secretKey := []byte("secret")
-	s := newServer(store, sessions.NewCookieStore(secretKey))
-	sc := securecookie.New(secretKey, nil)
+	cookieStore, secureCookie := TestSession(t)
+	s := newServer(store, cookieStore)
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -148,8 +146,8 @@ func TestServer_authUserMW(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodGet, "/", nil)
-			cookieStr, _ := sc.Encode(sessionName, tc.cookieValue)
+			req, _ := http.NewRequest(http.MethodGet, "/users", nil)
+			cookieStr, _ := secureCookie.Encode(sessionName, tc.cookieValue)
 			req.Header.Set("Cookie", fmt.Sprintf("%s=%s", sessionName, cookieStr))
 			s.authUserMW(handler).ServeHTTP(rec, req)
 			assert.Equal(t, tc.expectedCode, rec.Code)
@@ -174,15 +172,14 @@ func TestServer_handleUserLogout(t *testing.T) {
 		},
 	}
 
-	secretKey := []byte("secret")
-	s := newServer(store, sessions.NewCookieStore(secretKey))
-	sc := securecookie.New(secretKey, nil)
+	cookieStore, secureCookie := TestSession(t)
+	s := newServer(store, cookieStore)
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodGet, "/", nil)
-			cookieStr, _ := sc.Encode(sessionName, tc.cookieValue)
+			cookieStr, _ := secureCookie.Encode(sessionName, tc.cookieValue)
 			req.Header.Set("Cookie", fmt.Sprintf("%s=%s", sessionName, cookieStr))
 			s.handleUserLogout().ServeHTTP(rec, req)
 			assert.Empty(t, rec.Result().Header.Get("Cookie"))
@@ -217,7 +214,7 @@ func TestServer_handleWhoAmI(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodGet, "/user/whoami", nil)
+			req, _ := http.NewRequest(http.MethodGet, "/users/me", nil)
 			req = req.WithContext(context.WithValue(req.Context(), ctxKeyUser, tc.user_id))
 			srv.ServeHTTP(rec, req)
 			assert.Equal(t, tc.expectedCode, rec.Result().StatusCode)

@@ -50,13 +50,13 @@ func newServer(store store.Store, sessionStore sessions.Store) *server {
 }
 
 func (s *server) configureRouter() {
-	s.router.HandleFunc("/user/create", s.handleUserCreate()).Methods("POST")
-	s.router.HandleFunc("/user/login", s.handleUserLogin()).Methods("POST")
+	s.router.HandleFunc("/sign-up", s.handleUserCreate()).Methods("POST")
+	s.router.HandleFunc("/sign-in", s.handleUserLogin()).Methods("POST")
 
-	auth := s.router.PathPrefix("").Subrouter()
+	auth := s.router.PathPrefix("/users").Subrouter()
 	auth.Use(s.authUserMW)
 	auth.HandleFunc("/user/logout", s.handleUserLogout()).Methods("POST")
-	auth.HandleFunc("/user/whoami", s.handleWhoAmI()).Methods("GET")
+	auth.HandleFunc("/me", s.handleWhoAmI()).Methods("GET")
 
 	auth.HandleFunc("/task/add", s.handleTaskAdd()).Methods("POST")
 	auth.HandleFunc("/task/delete", s.handleTaskDelete()).Methods("DELETE").Queries("id", "{id}")
