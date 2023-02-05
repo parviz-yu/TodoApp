@@ -3,7 +3,7 @@
 «TodoApp» is a convenient REST API for providing data from the server to the user of a web application or website.
 
 ## Installation
-To build TodoApp from source, simply run `git clone https://github.com/pyuldashev912/restapi-todoapp` and `cd` into the project source directory. Then run `make`. After this, you should have a binary called `todoapp` in the current directory.
+To build TodoApp from source, simply run `git clone https://github.com/pyuldashev912/TodoApp` and `cd` into the project source directory. Then run `make`. After this, you should have a binary called `todoapp` in the current directory.
 ```
 $ make
 go build -v ./cmd/todoapp
@@ -22,12 +22,12 @@ $ ./todoapp
 INFO[0000] Listening...
 ```
 
-# REST API Endpoints
+# Endpoints
 ## Create a user
 ### Request
-`POST /user/create`
+`POST /sign-up`
 ```
-http POST localhost:8080/user/create name=name email=email password=password
+http POST localhost:8080/sign-up name=name email=email password=password
 ```
 ### Response
 ```
@@ -39,9 +39,9 @@ http POST localhost:8080/user/create name=name email=email password=password
 ```
 ## Login
 ### Request
-`POST /user/login`
+`POST /sign-in`
 ```
-http --session=user POST localhost:8080/user/login email=email password=password
+http --session=user POST localhost:8080/sign-in email=email password=password
 ```
 ### Response
 ```
@@ -51,9 +51,9 @@ http --session=user POST localhost:8080/user/login email=email password=password
 ```
 ## Logout
 ### Request
-`POST /user/logout`
+`POST /users/logout`
 ```
-http --session=user POST localhost:8080/user/logout
+http --session=user POST localhost:8080/users/logout
 ```
 ### Response
 ```
@@ -63,9 +63,9 @@ http --session=user POST localhost:8080/user/logout
 ```
 ## Who am I
 ### Request
-`GET /user/whoami`
+`GET /users/me`
 ```
-http --session=user GET localhost:8080/user/whoami
+http --session=user GET localhost:8080/users/me
 ```
 ### Response
 ```
@@ -77,9 +77,9 @@ http --session=user GET localhost:8080/user/whoami
 ```
 ## Create a task
 ### Request
-`POST /task/add`
+`POST /users/tasks`
 ```
-http --session=user POST localhost:8080/task/add title="Some task" description="Some text"
+http --session=user POST localhost:8080/users/tasks title="Some task" description="Some text"
 ```
 ### Response
 ```
@@ -93,9 +93,9 @@ http --session=user POST localhost:8080/task/add title="Some task" description="
 ```
 ## Get task
 ### Request
-`GET /task/get?id=<task_id>`
+`GET /users/tasks/id`
 ```
-http --session=user GET localhost:8080/task/get?id=<task_id>"
+http --session=user GET localhost:8080//users/tasks/id"
 ```
 ### Response
 ```
@@ -109,9 +109,9 @@ http --session=user GET localhost:8080/task/get?id=<task_id>"
 ```
 ## Get done/underdone tasks
 ### Request
-`GET /task/getdone?done=true/false`
+`GET /users/tasks?done=true/false`
 ```
-http --session=user GET localhost:8080/task/getdone?done=true"
+http --session=user GET localhost:8080/users/tasks?done=true"
 ```
 ### Response
 ```
@@ -128,9 +128,9 @@ http --session=user GET localhost:8080/task/getdone?done=true"
 ```
 ## Get all tasks
 ### Request
-`GET /task/getall`
+`GET /users/tasks`
 ```
-http --session=user GET localhost:8080/task/getall"
+http --session=user GET localhost:8080/users/tasks"
 ```
 ### Response
 ```
@@ -147,9 +147,9 @@ http --session=user GET localhost:8080/task/getall"
 ```
 ## Mark the task as completed
 ### Request
-`PATCH /task/done?id=<task_id>`
+`PATCH /users/tasks/id`
 ```
-http --session=user PATCH localhost:8080/task/done?id=<task_id>"
+http --session=user PATCH localhost:8080/users/tasks/id"
 ```
 ### Response
 ```
@@ -159,9 +159,9 @@ http --session=user PATCH localhost:8080/task/done?id=<task_id>"
 ```
 ## Delete the task
 ### Request
-`DELETE /task/delete?id=<task_id>`
+`DELETE /users/tasks/id`
 ```
-http --session=user delete localhost:8080/task/delete?id=<task_id>"
+http --session=user delete localhost:8080/users/tasks/id"
 ```
 ### Response
 ```
