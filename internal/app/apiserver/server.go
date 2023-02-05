@@ -55,15 +55,15 @@ func (s *server) configureRouter() {
 
 	auth := s.router.PathPrefix("/users").Subrouter()
 	auth.Use(s.authUserMW)
-	auth.HandleFunc("/user/logout", s.handleUserLogout()).Methods("POST")
+	auth.HandleFunc("/logout", s.handleUserLogout()).Methods("POST")
 	auth.HandleFunc("/me", s.handleWhoAmI()).Methods("GET")
 
-	auth.HandleFunc("/task/add", s.handleTaskAdd()).Methods("POST")
-	auth.HandleFunc("/task/delete", s.handleTaskDelete()).Methods("DELETE").Queries("id", "{id}")
-	auth.HandleFunc("/task/done", s.handleTaskDone()).Methods("PATCH").Queries("id", "{id}")
-	auth.HandleFunc("/task/get", s.handleTaskGet()).Methods("GET").Queries("id", "{id}")
-	auth.HandleFunc("/task/getdone", s.handleTaskGetDone()).Methods("GET").Queries("done", "{done}")
-	auth.HandleFunc("/task/getall", s.handleTaskGetAll()).Methods("GET")
+	auth.HandleFunc("/tasks", s.handleTaskGetDone()).Methods("GET").Queries("done", "{done}")
+	auth.HandleFunc("/tasks", s.handleTaskGetAll()).Methods("GET")
+	auth.HandleFunc("/tasks", s.handleTaskAdd()).Methods("POST")
+	auth.HandleFunc("/tasks/{id}", s.handleTaskGet()).Methods("GET")
+	auth.HandleFunc("/tasks/{id}", s.handleTaskDone()).Methods("PATCH")
+	auth.HandleFunc("/tasks/{id}", s.handleTaskDelete()).Methods("DELETE")
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -223,7 +223,13 @@ func (s *server) handleTaskAdd() http.HandlerFunc {
 func (s *server) handleTaskDelete() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := r.Context().Value(ctxKeyUser).(int)
-		taskId, err := strconv.Atoi(r.URL.Query().Get("id"))
+		taskIdString, ok := mux.Vars(r)["id"]
+		if !ok {
+			s.error(w, r, http.StatusBadRequest, nil)
+			return
+		}
+
+		taskId, err := strconv.Atoi(taskIdString)
 		if err != nil {
 			s.error(w, r, http.StatusBadRequest, store.ErrInvalidTaskId)
 			return
@@ -243,7 +249,12 @@ func (s *server) handleTaskDelete() http.HandlerFunc {
 func (s *server) handleTaskDone() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := r.Context().Value(ctxKeyUser).(int)
-		taskId, err := strconv.Atoi(r.URL.Query().Get("id"))
+		taskIdString, ok := mux.Vars(r)["id"]
+		if !ok {
+			s.error(w, r, http.StatusBadRequest, nil)
+			return
+		}
+		taskId, err := strconv.Atoi(taskIdString)
 		if err != nil {
 			s.error(w, r, http.StatusBadRequest, err)
 			return
@@ -268,7 +279,13 @@ func (s *server) handleTaskDone() http.HandlerFunc {
 func (s *server) handleTaskGet() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := r.Context().Value(ctxKeyUser).(int)
-		taskId, err := strconv.Atoi(r.URL.Query().Get("id"))
+		taskIdString, ok := mux.Vars(r)["id"]
+		if !ok {
+			s.error(w, r, http.StatusBadRequest, nil)
+			return
+		}
+
+		taskId, err := strconv.Atoi(taskIdString)
 		if err != nil {
 			s.error(w, r, http.StatusBadRequest, err)
 			return
@@ -334,6 +351,7 @@ func (s *server) error(w http.ResponseWriter, r *http.Request, code int, err err
 
 // helper function for writing a json respond
 func (s *server) respond(w http.ResponseWriter, r *http.Request, code int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(code)
 	if data != nil {
 		json.NewEncoder(w).Encode(data)

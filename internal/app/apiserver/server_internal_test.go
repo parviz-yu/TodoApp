@@ -267,7 +267,7 @@ func TestServer_handleTaskCreate(t *testing.T) {
 			rec := httptest.NewRecorder()
 			buf := &bytes.Buffer{}
 			json.NewEncoder(buf).Encode(tc.payload)
-			req, _ := http.NewRequest(http.MethodPost, "/task/add", buf)
+			req, _ := http.NewRequest(http.MethodPost, "/users/tasks", buf)
 			req = req.WithContext(context.WithValue(req.Context(), ctxKeyUser, tc.user_id))
 			srv.ServeHTTP(rec, req)
 			assert.Equal(t, tc.expectedCode, rec.Result().StatusCode)
@@ -290,19 +290,19 @@ func TestServer_handleTaskDelete(t *testing.T) {
 		{
 			name:         "valid id",
 			user_id:      task.UserID,
-			queryString:  "/task/delete?id=1",
+			queryString:  "/users/tasks/1",
 			expectedCode: http.StatusOK,
 		},
 		{
 			name:         "invalid id",
 			user_id:      task.UserID,
-			queryString:  "/task/delete?id=asdas",
+			queryString:  "/users/tasks/asdas",
 			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:         "not existing id",
 			user_id:      task.UserID,
-			queryString:  "/task/delete?id=564",
+			queryString:  "/users/tasks/564",
 			expectedCode: http.StatusNotFound,
 		},
 	}
@@ -333,19 +333,19 @@ func TestServer_handleTaskDone(t *testing.T) {
 		{
 			name:         "valid id",
 			user_id:      task.UserID,
-			queryString:  "/task/done?id=1",
+			queryString:  "/users/tasks/1",
 			expectedCode: http.StatusOK,
 		},
 		{
 			name:         "invalid id",
 			user_id:      task.UserID,
-			queryString:  "/task/done?id=asdas",
+			queryString:  "/users/tasks/asdas",
 			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:         "not existing id",
 			user_id:      task.UserID,
-			queryString:  "/task/done?id=564",
+			queryString:  "/users/tasks/564",
 			expectedCode: http.StatusNotFound,
 		},
 	}
@@ -376,19 +376,19 @@ func TestServer_handleTaskGet(t *testing.T) {
 		{
 			name:         "valid id",
 			userId:       task.UserID,
-			queryString:  "/task/get?id=1",
+			queryString:  "/users/tasks/1",
 			expectedCode: http.StatusOK,
 		},
 		{
 			name:         "invalid id",
 			userId:       task.UserID,
-			queryString:  "/task/get?id=id",
+			queryString:  "/users/tasks/id",
 			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:         "not existing id",
 			userId:       task.UserID,
-			queryString:  "/task/get?id=150",
+			queryString:  "/users/tasks/150",
 			expectedCode: http.StatusNotFound,
 		},
 	}
@@ -419,19 +419,19 @@ func TestServer_handleTaskGetDone(t *testing.T) {
 		{
 			name:         "valid argument",
 			userId:       task.UserID,
-			queryString:  "/task/getdone?done=false",
+			queryString:  "/users/tasks?done=false",
 			expectedCode: http.StatusOK,
 		},
 		{
 			name:         "not found task",
 			userId:       task.UserID,
-			queryString:  "/task/getdone?done=true",
+			queryString:  "/users/tasks?done=true",
 			expectedCode: http.StatusNotFound,
 		},
 		{
 			name:         "invalid argument",
 			userId:       task.UserID,
-			queryString:  "/task/getdone?done=2",
+			queryString:  "/users/tasks?done=2",
 			expectedCode: http.StatusBadRequest,
 		},
 	}
@@ -477,7 +477,7 @@ func TestServer_handleTaskGetAll(t *testing.T) {
 			if tc.create {
 				store.Task().Create(task)
 			}
-			req, _ := http.NewRequest(http.MethodGet, "/task/getall", nil)
+			req, _ := http.NewRequest(http.MethodGet, "/users/tasks", nil)
 			req = req.WithContext(context.WithValue(req.Context(), ctxKeyUser, tc.userId))
 			srv.ServeHTTP(rec, req)
 			assert.Equal(t, tc.expectedCode, rec.Result().StatusCode)
